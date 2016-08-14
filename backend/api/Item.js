@@ -1,5 +1,7 @@
-var fs = require("fs"),
-	db = __dirname + '/../database/item.json',
+var mkdirp = require("mkdirp"),
+	fs = require("fs"),
+	path = __dirname + "/../database/",
+	db = path + "item.json",
 	errorMap = {
 		req_param: {errorCode: 1,
 					text: "Missing required parameter"},
@@ -133,10 +135,16 @@ var accessData = function(onSuccess, onFail){
 };
 
 var storeData = function(data, onDone){
-	fs.writeFile(db, JSON.stringify(data), function(err){
-		if(onDone){
-			onDone(err);
-		}
+	mkdirp(path, function (err) {
+		if(err){
+			return res.status(500).send(err);
+		};
+
+		fs.writeFile(db, JSON.stringify(data), function(err){
+			if(onDone){
+				onDone(err);
+			}
+		});
 	});
 };
 
