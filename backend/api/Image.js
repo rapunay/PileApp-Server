@@ -1,4 +1,5 @@
-var fs = require("fs"),
+var mkdirp = require("mkdirp"),
+	fs = require("fs"),
 	imagesDir = __dirname + "/../uploads/images/";
 
 exports.upload = function(req, res, next){
@@ -10,15 +11,22 @@ exports.upload = function(req, res, next){
 		if(err){
 			return res.status(500).send(err);
 		}else{
-			fs.writeFile([imagesDir, dirname, "/", filename].join(""), data, function(err){
+			var path = [imagesDir, dirname, "/"].join("");
+			mkdirp(path, function (err) {
 				if(err){
 					return res.status(500).send(err);
-				}
-				var fileData = {
-					"base64": new Buffer(data).toString("base64")
-				}
-				fs.unlink(req.files.file.path);
-				return res.status(200).send(fileData);
+				};
+
+				fs.writeFile(path + filename, data, function(err){
+					if(err){
+						return res.status(500).send(err);
+					}
+					var fileData = {
+						"base64": new Buffer(data).toString("base64")
+					}
+					fs.unlink(req.files.file.path);
+					return res.status(200).send(fileData);
+				});
 			});
 		}
 	});

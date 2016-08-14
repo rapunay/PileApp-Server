@@ -28,7 +28,12 @@ exports.insert = function(req, res){
 			res.status(200).send(item);
 		});
 	},function(err){
-		return res.status(500).send(err);
+		storeData([item], function(err){
+			if(err){
+				return res.status(500).send(err);
+			}
+			res.status(200).send(item);
+		});
 	});
 };
 
