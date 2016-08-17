@@ -93,7 +93,7 @@ exports.find = function(req, res){
 					result.push(itemList[i]);
 				}
 			}else if(itemList[i][property]){
-				if(itemList[i][property].indexOf(propValue) >= 0){
+				if(itemList[i][property].toUpperCase().indexOf(propValue.toUpperCase()) >= 0){
 					result.push(itemList[i]);
 				}
 			}
@@ -150,7 +150,7 @@ var storeData = function(data, onDone){
 
 var getOne = function(property, propValue, itemList){
 	for(var i=0; i<itemList.length; i++){
-		if(itemList[i][property] == propValue){
+		if(itemList[i][property].toUpperCase() == propValue.toUpperCase()){
 			return itemList[i];
 		}
 	}
