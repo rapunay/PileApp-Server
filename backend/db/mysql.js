@@ -1,6 +1,5 @@
-var mysql = require("mysql");
-
-db= mysql.createConnection(process.env.JAWSDB_URL);
+var mysql = require("mysql"),
+	db = mysql.createConnection(process.env.JAWSDB_URL);
 	
 /*
 db = mysql.createConnection({
@@ -11,5 +10,4 @@ db = mysql.createConnection({
 });
 */
 
-db.connect();
 module.exports = db;
