@@ -1,159 +1,119 @@
-var mkdirp = require("mkdirp"),
-	fs = require("fs"),
-	path = __dirname + "/../database/",
-	db = path + "item.json",
-	errorMap = {
-		req_param: {errorCode: 1,
-					text: "Missing required parameter"},
-		dup_item: {errorCode: 2,
-					text: "Duplicate item"}
-	};
+var db = require(__dirname + "/../db/mysql");
 
-exports.insert = function(req, res){
+exports.insert = function(req, res, next){
 	var item = req.body;
 	
-	if(!item.id || !item.name){
-		return res.status(412).send(errorMap["req_param"]);
-	}
-	
-	accessData(function(data){
-		if(getOne("id", item.id, data)){
-			return res.status(412).send(errorMap["dup_item"]);
-		}
+	db.query("INSERT INTO item(id, name, model, type, quantity, price, description, itemImage) VALUES (?,?,?,?,?,?,?,?)",
+		[item.id, item.name, item.model, item.type, item.quantity, item.price, item.description, item.itemImage],
 		
-		data.push(item);
-		
-		storeData(data, function(err){
+		function(err, row){
 			if(err){
 				return res.status(500).send(err);
 			}
-			res.status(200).send(item);
-		});
-	},function(err){
-		storeData([item], function(err){
+			selectOne(row.insertId, function(newRow){
+				if(!newRow){
+					return res.status(500).send({message: "Item ("+row.insertId+") was not created."});
+				}else{
+					return res.status(200).send(newRow);
+				}
+			});
+		}
+	);
+};
+
+exports.remove = function(req, res, next){
+	db.query("UPDATE item SET _recStatus = 'DELETED' WHERE _id=?",
+		[req.params.id],
+		
+		function(err, row){
 			if(err){
 				return res.status(500).send(err);
 			}
-			res.status(200).send(item);
-		});
-	});
-};
-
-exports.remove = function(req, res){
-	accessData(function(itemList){
-		for(var i=0; i<itemList.length; i++){
-			if(itemList[i].id == req.params.id){
-				var removedItem = itemList.splice(i, 1);
-			
-				storeData(itemList, function(err){
-					if(err){
-						return res.status(500).send(err);
-					}
-					return res.status(200).send(removedItem[0]);
+			if(row.length === 0){
+				return res.status(404).send({message: "Item ("+req.params.id+") was not removed."})
+			}else{
+				selectOne(req.params.id, function(removedRow){
+					return res.status(200).send(removedRow);
 				});
 			}
 		}
-	},function(err){
-		return res.status(500).send(err);
-	});
+	);
 };
 
-exports.update = function(req, res){
+exports.hardRemove = function(req, res, next){
+	db.query("DELETE from item WHERE id=?",
+		[req.params.id],
+		
+		function(err, row){
+			if(err){
+				return res.status(500).send(err);
+			}
+			if(row.length === 0){
+				return res.status(404).send({message: "Item ("+req.params.id+") was not removed."})
+			}else{
+				return res.status(200).send({id: req.params.id});
+			}
+		}
+	);
+};
+
+exports.update = function(req, res, next){
 	var item = req.body;
 	
-	if(!item.id || !item.name){
-		return res.status(412).send(errorMap["req_param"]);
-	}
-	accessData(function(itemList){	
-		for(var i=0; i<itemList.length; i++){
-			if(itemList[i].id == item.id){
-				itemList[i] = item;
-				storeData(itemList, function(err){
-					if (err) {
-						return res.status(500).send(err);
-					}
-					res.status(200).send(item);
+	db.query("UPDATE item SET name=?, model=?, type=?, quantity=?, price=?, description=?, itemImage=?, _recStatus='ACTIVE', _updated=now() WHERE id=?",
+		[item.name, item.model, item.type, item.quantity, item.price, item.description, item.itemImage, item.id],
+		
+		function(err, row){
+			if(err){
+				return res.status(500).send(err);
+			}
+			if(row.length === 0){
+				return res.status(404).send({message: "Item ("+item.id+") was not updated."})
+			}else{
+				selectOne(item._id, function(updatedRow){
+					return res.status(200).send(updatedRow);
 				});
 			}
 		}
-	},function(err){
-		return res.status(500).send(err);
-	});
+	);
 };
 
-exports.find = function(req, res){
+exports.find = function(req, res, next){
 	var property = req.params.property,
 		propValue = req.params.value;
+
+	db.query("SELECT * FROM item WHERE "+property+" LIKE '%"+propValue+"%'",
+		function(err, rows){
+			if(err){
+				return res.status(500).send(err);
+			}
+			return res.status(200).send(rows);
+		}
+	);
+
+};
+
+exports.findAll = function(req, res, next){
+	db.query("SELECT * FROM item",
+		function(err, rows){
+			if(err){
+				return res.status(500).send(err);
+			}
+			return res.status(200).send(rows);
+		}
+	);
+};
+
+var selectOne = function(id, callback){
+	db.query("SELECT * FROM item WHERE _id=? LIMIT 1",
+		[id],
 		
-	accessData(function(itemList){
-		var result = [];
-		for(var i=0; i<itemList.length; i++){
-			if(property == "quantity" || property == "price"){
-				if(itemList[i][property] == propValue){
-					result.push(itemList[i]);
-				}
-			}else if(itemList[i][property]){
-				if(itemList[i][property].toUpperCase().indexOf(propValue.toUpperCase()) >= 0){
-					result.push(itemList[i]);
-				}
+		function(err, rows){
+			if(err || rows.length === 0){
+				callback(null);
+			}else{
+				callback(rows[0]);
 			}
 		}
-		res.status(200).send(result);
-	},function(err){
-		res.status(200).send([]);
-	});
-};
-
-exports.findAll = function(req, res){
-	accessData(function(data){
-		return res.status(200).send(data);
-	},function(err){
-		return res.status(200).send([]);
-	});
-};
-
-var accessData = function(onSuccess, onFail){
-	fs.readFile(db, function(err, data){
-		if(err){
-			if(onFail){
-				onFail(err);
-			}
-		}else{
-			var dataStr = data.toString();
-			
-			if(dataStr != ""){
-				data = JSON.parse(dataStr);
-			}else {
-				data = [];
-			}
-			
-			if(onSuccess){
-				onSuccess(data);
-			}
-		}
-	});
-};
-
-var storeData = function(data, onDone){
-	mkdirp(path, function (err) {
-		if(err){
-			return res.status(500).send(err);
-		};
-
-		fs.writeFile(db, JSON.stringify(data), function(err){
-			if(onDone){
-				onDone(err);
-			}
-		});
-	});
-};
-
-var getOne = function(property, propValue, itemList){
-	for(var i=0; i<itemList.length; i++){
-		if(itemList[i][property].toUpperCase() == propValue.toUpperCase()){
-			return itemList[i];
-		}
-	}
-	
-	return null;
-};
+	);
+}

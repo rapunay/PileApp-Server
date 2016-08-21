@@ -44,3 +44,4 @@ backend/database/
 
 # Ignore all files in uploads directory
 backend/uploads/
+.env

@@ -1,48 +1,16 @@
-var mkdirp = require("mkdirp"),
-	fs = require("fs"),
-	imagesDir = __dirname + "/../uploads/images/";
+var fs = require("fs");
 
 exports.upload = function(req, res, next){
-	var filename = req.body.filename,
-    	dirname = req.body.dirname,
-    	file = req.files.file;
+	var file = req.files.file;
     
 	fs.readFile(file.path, function(err, data){
 		if(err){
 			return res.status(500).send(err);
-		}else{
-			var path = [imagesDir, dirname, "/"].join("");
-			mkdirp(path, function (err) {
-				if(err){
-					return res.status(500).send(err);
-				};
-
-				fs.writeFile(path + filename, data, function(err){
-					if(err){
-						return res.status(500).send(err);
-					}
-					var fileData = {
-						"base64": new Buffer(data).toString("base64")
-					}
-					fs.unlink(req.files.file.path);
-					return res.status(200).send(fileData);
-				});
-			});
-		}
-	});
-};
-
-exports.retrieve = function(req, res, next){
-	var dirname = req.params.dirname,
-    	filename = req.params.filename;
-    
-	fs.readFile([imagesDir, dirname, "/", filename].join(""), function(err, data){
-		if(err){
-			return res.status(500).send(err);
-		}else{
+		}else{			
 			var fileData = {
 				"base64": new Buffer(data).toString("base64")
 			}
+			fs.unlink(req.files.file.path);
 			return res.status(200).send(fileData);
 		}
 	});
