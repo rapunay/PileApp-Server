@@ -39,9 +39,5 @@ jspm_packages
 # Mac .DS_Store files
 .DS_Store
 
-# Ignore all files in database directory
-backend/database/
-
-# Ignore all files in uploads directory
-backend/uploads/
+# Do not commit environment info/credentials
 .env
