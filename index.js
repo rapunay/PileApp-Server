@@ -9,5 +9,5 @@ app.use(express.static(__dirname + "/"));
 app.use(require(__dirname + "/backend/config/router")(express.Router()));
 
 app.listen(app.get("port"), function() {
-	console.log("Initializing PileAPP REST API at port", app.get("port"), ".");
+	console.log("Initializing PileAPP REST API at port", app.get("port"));
 });
